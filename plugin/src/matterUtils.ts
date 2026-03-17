@@ -4,7 +4,7 @@ import { App } from 'obsidian';
  *  Step 0 = file's own parent folder. Max 6 levels up. Returns folder path or null. */
 export async function findMatterRoot(app: App): Promise<string | null> {
   const activeFile = app.workspace.getActiveFile();
-  if (!activeFile) return null;
+  if (!activeFile || !activeFile.parent) return null;
 
   let folderPath: string = activeFile.parent.path;
 

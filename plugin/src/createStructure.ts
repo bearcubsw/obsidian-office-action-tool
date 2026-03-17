@@ -50,6 +50,13 @@ export async function createStructure(app: App, log: LogService): Promise<boolea
     return false;
   }
 
+  if (!activeFile.parent) {
+    const msg = 'Cannot create structure at vault root. Open a file inside a subfolder first.';
+    log.error(msg);
+    new Notice(msg);
+    return false;
+  }
+
   const root = activeFile.parent.path;
   const instructionsPath = `${root}/AI Instructions.md`;
 
