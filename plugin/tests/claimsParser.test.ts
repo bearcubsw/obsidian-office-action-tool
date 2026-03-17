@@ -189,6 +189,19 @@ describe('diffClaims', () => {
     expect(claim1?.diffedPreamble).toContain('~~comprising:~~');
     expect(claim1?.diffedPreamble).toContain('<u>consisting of:</u>');
   });
+
+  test('deleted clauses (original has more than current) appear as strikethrough', () => {
+    // Original claim 1 has 4 clauses; current has only 2 — last 2 should be struck through
+    const origText = 'CLAIM OR CLAIMS\n\n1. A method comprising:\n    1. step one,\n    2. step two,\n    3. step three, and\n    4. step four.\n2. A method wherein:\n    1. step a.\n3. A method consisting:\n    1. step b.\n';
+    const currText = 'CLAIM OR CLAIMS\n\n1. A method comprising:\n    1. step one,\n    2. step two.\n2. A method wherein:\n    1. step a.\n3. A method consisting:\n    1. step b.\n';
+    const original = parseClaims(origText);
+    const current = parseClaims(currText);
+    const result = diffClaims(original, current);
+    const claim1 = result.find(c => c.number === 1);
+    expect(claim1?.diffedClauses).toHaveLength(4);
+    expect(claim1?.diffedClauses[2]).toContain('~~');
+    expect(claim1?.diffedClauses[3]).toContain('~~');
+  });
 });
 
 describe('serializeClaims', () => {

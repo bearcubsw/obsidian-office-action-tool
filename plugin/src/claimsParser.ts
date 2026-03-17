@@ -154,7 +154,12 @@ export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
         statusMarker,
         diffedPreamble: contentChanged ? wordDiff(orig.preamble, curr.preamble) : curr.preamble,
         diffedClauses: contentChanged
-          ? curr.clauses.map((clause, i) => wordDiff(orig.clauses[i] ?? '', clause))
+          ? Array.from({ length: Math.max(orig.clauses.length, curr.clauses.length) }, (_, i) => {
+              const currClause = curr.clauses[i];
+              const origClause = orig.clauses[i] ?? '';
+              if (currClause === undefined) return `~~${origClause}~~`; // deleted clause
+              return wordDiff(origClause, currClause);
+            })
           : curr.clauses,
         canceled: false,
       });
