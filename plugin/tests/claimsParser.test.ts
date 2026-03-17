@@ -76,6 +76,14 @@ describe('parseClaims', () => {
     const claims = parseClaims(SAMPLE_CLAIMS);
     expect(claims[0].clauses).toHaveLength(2);
   });
+
+  test('recognizes cancelled marker at end of line with no trailing text', () => {
+    const content = 'CLAIM OR CLAIMS\n\n9. (cancelled)\n10. (cancelled)\n11. (cancelled)\n';
+    const claims = parseClaims(content);
+    const claim9 = claims.find(c => c.number === 9);
+    expect(claim9?.existingStatusMarker).toBe('cancelled');
+    expect(claim9?.preamble).toBe('');
+  });
 });
 
 describe('diffClaims', () => {
@@ -102,17 +110,29 @@ describe('diffClaims', () => {
     expect(claim4?.statusMarker).toBe('New');
   });
 
-  test('marks claim only in original as (Canceled)', () => {
+  test('marks claim only in original as (Cancelled)', () => {
     const original = parseClaims(SAMPLE_CLAIMS);
     const current = parseClaims(AMENDED_CLAIMS); // claim 3 is gone
     const result = diffClaims(original, current);
     const claim3 = result.find(c => c.number === 3);
-    expect(claim3?.statusMarker).toBe('Canceled');
+    expect(claim3?.statusMarker).toBe('Cancelled');
+    expect(claim3?.canceled).toBe(true);
+  });
+
+  test('marks claim with (cancelled) existingMarker as (Cancelled) regardless of content', () => {
+    // Attorney marks the claim cancelled in the current file
+    const content = 'CLAIM OR CLAIMS\n\n1. A method comprising:\n    1. step one.\n2. (cancelled)\n3. A method wherein:\n    1. step one.\n';
+    const original = parseClaims(SAMPLE_CLAIMS);
+    const current = parseClaims(content);
+    const result = diffClaims(original, current);
+    const claim2 = result.find(c => c.number === 2);
+    expect(claim2?.statusMarker).toBe('Cancelled');
+    expect(claim2?.canceled).toBe(true);
   });
 
   test('marks unchanged claim with existing (Currently Amended) marker as (Previously Amended)', () => {
-    const original = parseClaims(AMENDED_CLAIMS); // has (Currently Amended) on claim 1
-    const current = parseClaims(AMENDED_CLAIMS);  // same content
+    const original = parseClaims(AMENDED_CLAIMS);
+    const current = parseClaims(AMENDED_CLAIMS);
     const result = diffClaims(original, current);
     const claim1 = result.find(c => c.number === 1);
     expect(claim1?.statusMarker).toBe('Previously Amended');
@@ -135,6 +155,40 @@ describe('diffClaims', () => {
     const claim1 = result.find(c => c.number === 1);
     expect(claim1?.statusMarker).toBe('Previously Amended');
   });
+
+  test('handles lowercase existing marker (currently amended) as Previously Amended', () => {
+    const lower = AMENDED_CLAIMS.replace('Currently Amended', 'currently amended');
+    const original = parseClaims(lower);
+    const current = parseClaims(lower);
+    const result = diffClaims(original, current);
+    const claim1 = result.find(c => c.number === 1);
+    expect(claim1?.statusMarker).toBe('Previously Amended');
+  });
+
+  test('marks claim with (withdrawn) marker as (Withdrawn) with body intact', () => {
+    const withdrawn = SAMPLE_CLAIMS.replace('1. A method for preoperative preparation; comprising:', '1. (withdrawn) A method for preoperative preparation; comprising:');
+    const original = parseClaims(SAMPLE_CLAIMS);
+    const current = parseClaims(withdrawn);
+    const result = diffClaims(original, current);
+    const claim1 = result.find(c => c.number === 1);
+    expect(claim1?.statusMarker).toBe('Withdrawn');
+    expect(claim1?.canceled).toBe(false);
+    expect(claim1?.diffedPreamble).toBe('A method for preoperative preparation; comprising:');
+  });
+
+  test('word-level diff wraps whole words not characters', () => {
+    // "comprising:" → "consisting of:" should produce ~~comprising:~~<u>consisting of:</u>
+    // NOT ~~mpr~~<u>ns</u>is<u>t</u>ing<u> of</u> (character-level)
+    const origText = 'CLAIM OR CLAIMS\n\n1. A method comprising:\n    1. step one.\n2. A method wherein:\n    1. step two.\n3. A method consisting:\n    1. step three.\n';
+    const currText = 'CLAIM OR CLAIMS\n\n1. A method consisting of:\n    1. step one.\n2. A method wherein:\n    1. step two.\n3. A method consisting:\n    1. step three.\n';
+    const original = parseClaims(origText);
+    const current = parseClaims(currText);
+    const result = diffClaims(original, current);
+    const claim1 = result.find(c => c.number === 1);
+    // Should contain whole-word markup, not character fragments
+    expect(claim1?.diffedPreamble).toContain('~~comprising:~~');
+    expect(claim1?.diffedPreamble).toContain('<u>consisting of:</u>');
+  });
 });
 
 describe('serializeClaims', () => {
@@ -148,12 +202,27 @@ describe('serializeClaims', () => {
     expect(output).toContain('4. (New)');
   });
 
-  test('wraps canceled claim body in strikethrough', () => {
+  test('cancelled claim has no body text', () => {
     const original = parseClaims(SAMPLE_CLAIMS);
-    const current = parseClaims(AMENDED_CLAIMS);
+    const current = parseClaims(AMENDED_CLAIMS); // claim 3 absent
     const diffed = diffClaims(original, current);
     const output = serializeClaims(diffed);
-    expect(output).toContain('3. (Canceled)');
-    expect(output).toMatch(/~~.*ocular surface optimization.*~~/s);
+    expect(output).toContain('3. (Cancelled)');
+    // No strikethrough body — just the marker line
+    const lines = output.split('\n');
+    const claimLine = lines.find(l => l.startsWith('3. '));
+    expect(claimLine).toBe('3. (Cancelled)');
+  });
+
+  test('attorney-cancelled claim has no body text', () => {
+    const cancelledClaims = 'CLAIM OR CLAIMS\n\n1. A method comprising:\n    1. step one.\n2. (cancelled)\n3. A method wherein:\n    1. step one.\n';
+    const original = parseClaims(SAMPLE_CLAIMS);
+    const current = parseClaims(cancelledClaims);
+    const diffed = diffClaims(original, current);
+    const output = serializeClaims(diffed);
+    expect(output).toContain('2. (Cancelled)');
+    const lines = output.split('\n');
+    const claimLine = lines.find(l => l.startsWith('2. '));
+    expect(claimLine).toBe('2. (Cancelled)');
   });
 });

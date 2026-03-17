@@ -1,11 +1,11 @@
-import { diff_match_patch, DIFF_DELETE, DIFF_INSERT, DIFF_EQUAL } from 'diff-match-patch';
+import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from 'diff-match-patch';
 
 export interface Claim {
   number: number;
   existingStatusMarker: string | null;
   preamble: string;
   clauses: string[];
-  rawBody: string; // full text lines after the top-level line
+  rawBody: string;
 }
 
 export interface DiffedClaim extends Claim {
@@ -17,8 +17,12 @@ export interface DiffedClaim extends Claim {
 
 const CLAIM_KEYWORDS = /\b(comprising|consisting|wherein)\b/i;
 const TOP_LEVEL_RE = /^(\d+)\.\s+(.*)/;
-const STATUS_MARKER_RE = /^\(([^)]+)\)\s+(.*)/;
+// Optional trailing content after marker — handles "9. (cancelled)" with nothing after
+const STATUS_MARKER_RE = /^\(([^)]+)\)(?:\s+(.*))?$/;
 const EXCLUDING_HEADINGS = /^#\s+(Remarks|Strategy)/i;
+
+const PREVIOUSLY_AMENDED_MARKERS_LC = new Set(['currently amended', 'previously amended', 'new']);
+const CANCELLED_MARKERS_LC = new Set(['cancelled', 'canceled']);
 
 export function isClaimsDocument(content: string): boolean {
   if (EXCLUDING_HEADINGS.test(content.trim())) return false;
@@ -43,7 +47,7 @@ export function parseClaims(content: string): Claim[] {
       current = {
         number,
         existingStatusMarker: markerMatch ? markerMatch[1] : null,
-        preamble: markerMatch ? markerMatch[2] : rest,
+        preamble: markerMatch ? (markerMatch[2] ?? '') : rest,
         clauses: [],
         rawBody: '',
       };
@@ -63,29 +67,69 @@ function claimContentKey(claim: Claim): string {
   return claim.preamble + '|' + claim.clauses.join('|');
 }
 
+/** Word-level diff using DMP token encoding. */
 function wordDiff(original: string, current: string): string {
   const dmp = new diff_match_patch();
-  const diffs = dmp.diff_main(original, current);
+  const wordArr: string[] = [];
+  const wordMap = new Map<string, number>();
+
+  function encode(text: string): string {
+    const tokens = text.match(/\S+|\s+/g) ?? [];
+    return tokens.map(token => {
+      if (!wordMap.has(token)) {
+        wordMap.set(token, wordArr.length);
+        wordArr.push(token);
+      }
+      return String.fromCharCode(wordMap.get(token)!);
+    }).join('');
+  }
+
+  const diffs = dmp.diff_main(encode(original), encode(current), false);
   dmp.diff_cleanupSemantic(diffs);
-  return diffs.map(([op, text]) => {
-    if (op === DIFF_DELETE) return `~~${text}~~`;
-    if (op === DIFF_INSERT) return `<u>${text}</u>`;
-    return text;
+
+  return diffs.map(([op, encoded]) => {
+    const decoded = Array.from(encoded).map(c => wordArr[c.charCodeAt(0)]).join('');
+    if (op === DIFF_DELETE) return `~~${decoded}~~`;
+    if (op === DIFF_INSERT) return `<u>${decoded}</u>`;
+    return decoded;
   }).join('');
 }
-
-const PREVIOUSLY_AMENDED_MARKERS = new Set(['Currently Amended', 'Previously Amended', 'New']);
 
 export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
   const origByNum = new Map(original.map(c => [c.number, c]));
   const currByNum = new Map(current.map(c => [c.number, c]));
   const result: DiffedClaim[] = [];
 
-  // Process current claims
   for (const curr of current) {
+    const markerLC = curr.existingStatusMarker?.toLowerCase() ?? null;
+
+    // Terminal: cancelled (attorney-marked)
+    if (markerLC && CANCELLED_MARKERS_LC.has(markerLC)) {
+      result.push({
+        ...curr,
+        statusMarker: 'Cancelled',
+        diffedPreamble: '',
+        diffedClauses: [],
+        canceled: true,
+      });
+      continue;
+    }
+
+    // Terminal: withdrawn — keep body, no diff
+    if (markerLC === 'withdrawn') {
+      const orig = origByNum.get(curr.number);
+      result.push({
+        ...curr,
+        statusMarker: 'Withdrawn',
+        diffedPreamble: orig ? orig.preamble : curr.preamble,
+        diffedClauses: orig ? orig.clauses : curr.clauses,
+        canceled: false,
+      });
+      continue;
+    }
+
     const orig = origByNum.get(curr.number);
     if (!orig) {
-      // New claim
       result.push({
         ...curr,
         statusMarker: 'New',
@@ -98,7 +142,7 @@ export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
       let statusMarker: string;
       if (contentChanged) {
         statusMarker = 'Currently Amended';
-      } else if (curr.existingStatusMarker && PREVIOUSLY_AMENDED_MARKERS.has(curr.existingStatusMarker)) {
+      } else if (markerLC && PREVIOUSLY_AMENDED_MARKERS_LC.has(markerLC)) {
         statusMarker = 'Previously Amended';
       } else {
         statusMarker = 'Original';
@@ -115,20 +159,19 @@ export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
     }
   }
 
-  // Process canceled claims (in original but not in current)
+  // Claims absent from current → Cancelled
   for (const orig of original) {
     if (!currByNum.has(orig.number)) {
       result.push({
         ...orig,
-        statusMarker: 'Canceled',
-        diffedPreamble: `~~${orig.preamble}~~`,
-        diffedClauses: orig.clauses.map(c => `~~${c}~~`),
+        statusMarker: 'Cancelled',
+        diffedPreamble: '',
+        diffedClauses: [],
         canceled: true,
       });
     }
   }
 
-  // Sort by claim number
   result.sort((a, b) => a.number - b.number);
   return result;
 }
@@ -136,10 +179,13 @@ export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
 export function serializeClaims(claims: DiffedClaim[]): string {
   const lines: string[] = [];
   for (const claim of claims) {
-    const markerStr = `(${claim.statusMarker}) `;
-    lines.push(`${claim.number}. ${markerStr}${claim.diffedPreamble}`);
-    for (const clause of claim.diffedClauses) {
-      lines.push(clause);
+    if (claim.canceled) {
+      lines.push(`${claim.number}. (Cancelled)`);
+    } else {
+      lines.push(`${claim.number}. (${claim.statusMarker}) ${claim.diffedPreamble}`);
+      for (const clause of claim.diffedClauses) {
+        lines.push(clause);
+      }
     }
     lines.push('');
   }
