@@ -1,0 +1,111 @@
+/* Office Action Tool sidebar panel */
+.oat-panel {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.oat-tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 4px;
+}
+
+.oat-tab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.oat-tab-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.oat-tab-btn.oat-tab-active {
+  background: var(--background-modifier-active-hover);
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.oat-tab-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.oat-action-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: var(--font-ui-medium);
+  color: var(--text-normal);
+}
+
+.oat-action-btn:hover {
+  background: var(--interactive-hover);
+}
+
+.oat-action-btn:active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.oat-notes-list,
+.oat-log-list {
+  overflow-y: auto;
+}
+
+.oat-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-small);
+}
+
+.oat-note-item {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.oat-note-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.oat-note-label {
+  font-weight: 600;
+  font-size: var(--font-ui-small);
+  color: var(--text-accent);
+  display: block;
+}
+
+.oat-note-text {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  display: block;
+}
+
+.oat-log-entry {
+  font-size: var(--font-ui-smaller);
+  font-family: var(--font-monospace);
+  padding: 2px 0;
+  line-height: 1.5;
+}
+
+.oat-log-ts { color: var(--text-faint); }
+.oat-log-info { color: var(--text-muted); }
+.oat-log-success { color: var(--color-green); }
+.oat-log-warn { color: var(--color-yellow); }
+.oat-log-error { color: var(--color-red); }
