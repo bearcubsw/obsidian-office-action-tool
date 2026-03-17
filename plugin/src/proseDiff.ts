@@ -28,7 +28,9 @@ function runDmp(original: string, current: string): string {
     if (op === DIFF_DELETE) return `~~${text}~~`;
     if (op === DIFF_INSERT) return `<u>${text}</u>`;
     return text;
-  }).join('');
+  }).join('')
+    .replace(/~~(<u>)/g, '~~ $1')
+    .replace(/(<\/u>)(~~)/g, '$1 $2');
 }
 
 export function diffProse(original: string, current: string): string {

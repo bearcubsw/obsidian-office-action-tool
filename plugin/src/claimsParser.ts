@@ -92,7 +92,9 @@ function wordDiff(original: string, current: string): string {
     if (op === DIFF_DELETE) return `~~${decoded}~~`;
     if (op === DIFF_INSERT) return `<u>${decoded}</u>`;
     return decoded;
-  }).join('');
+  }).join('')
+    .replace(/~~(<u>)/g, '~~ $1')
+    .replace(/(<\/u>)(~~)/g, '$1 $2');
 }
 
 export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
