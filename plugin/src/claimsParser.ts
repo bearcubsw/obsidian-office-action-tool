@@ -157,7 +157,10 @@ export function diffClaims(original: Claim[], current: Claim[]): DiffedClaim[] {
           ? Array.from({ length: Math.max(orig.clauses.length, curr.clauses.length) }, (_, i) => {
               const currClause = curr.clauses[i];
               const origClause = orig.clauses[i] ?? '';
-              if (currClause === undefined) return `~~${origClause}~~`; // deleted clause
+              if (currClause === undefined) {
+                const m = /^(\s*\d+\.\s+)(.*)/.exec(origClause);
+                return m ? `${m[1]}~~${m[2]}~~` : `~~${origClause}~~`;
+              }
               return wordDiff(origClause, currClause);
             })
           : curr.clauses,

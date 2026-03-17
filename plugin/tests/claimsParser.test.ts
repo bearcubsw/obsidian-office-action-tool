@@ -199,8 +199,9 @@ describe('diffClaims', () => {
     const result = diffClaims(original, current);
     const claim1 = result.find(c => c.number === 1);
     expect(claim1?.diffedClauses).toHaveLength(4);
-    expect(claim1?.diffedClauses[2]).toContain('~~');
-    expect(claim1?.diffedClauses[3]).toContain('~~');
+    // Strikethrough wraps only the text, not the leading indent+number
+    expect(claim1?.diffedClauses[2]).toMatch(/^\s+\d+\.\s+~~.+~~$/);
+    expect(claim1?.diffedClauses[3]).toMatch(/^\s+\d+\.\s+~~.+~~$/);
   });
 });
 
