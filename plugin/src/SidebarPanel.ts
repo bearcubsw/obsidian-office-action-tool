@@ -1,6 +1,7 @@
 import { ItemView, WorkspaceLeaf, MarkdownView, setIcon } from 'obsidian';
 import { LogService, LogLevel } from './LogService';
 import { createStructure } from './createStructure';
+import { createTasks } from './createTasks';
 import { createBackup } from './createBackup';
 import { trackChanges } from './trackChanges';
 import { archiveTasks } from './archiveTasks';
@@ -85,6 +86,16 @@ export class SidebarPanel extends ItemView {
         handler: async () => {
           const countBefore = this.log.entries.length;
           await createStructure(this.app, this.log);
+          this.switchToLogOnError(countBefore);
+        },
+      },
+      {
+        label: 'Create Tasks',
+        lucideIcon: 'list-checks',
+        tooltip: 'Create a standalone task management folder with AI Instructions',
+        handler: async () => {
+          const countBefore = this.log.entries.length;
+          await createTasks(this.app, this.log);
           this.switchToLogOnError(countBefore);
         },
       },

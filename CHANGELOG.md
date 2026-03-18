@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0] — 2026-03-18
+
+### Create Tasks — Standalone Task Management
+
+- **New command: Create Tasks** — creates a lightweight, flat task management folder in any directory. No patent structure, no subfolders — just task files and AI Instructions.
+- **New sidebar button** — "Create Tasks" (list-checks icon) positioned after Create Structure
+- **New command palette entry** — `Office Action: Create Tasks`
+- **Third Party Tasks** — standalone task folders use "Third Party Tasks.md" instead of "Inventor Tasks.md" for general-purpose use (client, contractor, etc.)
+- **Archive Tasks works in both layouts** — detects whether task files are in `01 Tasks/` (matter structure) or flat next to `AI Instructions.md` (standalone); handles both automatically
+- **Third Party Tasks archiving** — Archive Tasks now also scans `Third Party Tasks.md` (party: "Third Party")
+- **README.md** — project documentation with PowerShell install script, manual install, and usage guide
+
 ## [1.1.0] — 2026-03-18
 
 ### V2 Folder Structure

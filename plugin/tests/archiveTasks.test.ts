@@ -187,3 +187,57 @@ describe('archiveTasks', () => {
     expect(aiContent).not.toContain('Child task done');
   });
 });
+
+describe('archiveTasks — flat folder (standalone tasks)', () => {
+  function setupFlat(root: string, aiContent: string, userContent: string, thirdPartyContent?: string) {
+    const app = new MockApp();
+    app.vault.files.set(`${root}/AI Instructions.md`, '# AI Instructions');
+    app.vault.folders.add(root);
+    // No 01 Tasks/ subfolder — files are flat next to AI Instructions.md
+    app.vault.files.set(`${root}/AI Tasks.md`, aiContent);
+    app.vault.files.set(`${root}/User Tasks.md`, userContent);
+    if (thirdPartyContent !== undefined) {
+      app.vault.files.set(`${root}/Third Party Tasks.md`, thirdPartyContent);
+    }
+    app.workspace.setActiveFile(makeFile(`${root}/AI Tasks.md`));
+    return app;
+  }
+
+  test('finds task files in root when no 01 Tasks/ subfolder exists', async () => {
+    const app = setupFlat('project',
+      '# AI Tasks\n\n- [x] Do the thing\n',
+      '# User Tasks\n',
+    );
+    const log = new LogService();
+    const result = await archiveTasks(app as any, log);
+    expect(result).toBe(true);
+    expect(app.vault.files.has('project/Completed Tasks Log.md')).toBe(true);
+    const logContent = app.vault.files.get('project/Completed Tasks Log.md')!;
+    expect(logContent).toContain('Do the thing');
+  });
+
+  test('archives Third Party Tasks with correct party label', async () => {
+    const app = setupFlat('project',
+      '# AI Tasks\n',
+      '# User Tasks\n',
+      '# Third Party Tasks\n\n- [x] Send the contract\n',
+    );
+    const log = new LogService();
+    await archiveTasks(app as any, log);
+    const logContent = app.vault.files.get('project/Completed Tasks Log.md')!;
+    expect(logContent).toContain('| Third Party |');
+    expect(logContent).toContain('Send the contract');
+  });
+
+  test('removes completed tasks from flat source files', async () => {
+    const app = setupFlat('project',
+      '# AI Tasks\n\n- [x] Done\n- [ ] Pending\n',
+      '# User Tasks\n',
+    );
+    const log = new LogService();
+    await archiveTasks(app as any, log);
+    const aiContent = app.vault.files.get('project/AI Tasks.md')!;
+    expect(aiContent).not.toContain('- [x] Done');
+    expect(aiContent).toContain('- [ ] Pending');
+  });
+});

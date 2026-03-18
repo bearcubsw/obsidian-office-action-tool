@@ -6,31 +6,42 @@ const LOG_FILENAME = 'Completed Tasks Log.md';
 const DONE_RE = /^(\s*)-\s+\[x\]\s+(.*)$/;
 
 const SOURCE_FILES: { filename: string; party: string }[] = [
-  { filename: 'AI Tasks.md',       party: 'AI'       },
-  { filename: 'User Tasks.md',     party: 'User'     },
-  { filename: 'Inventor Tasks.md', party: 'Inventor' },
+  { filename: 'AI Tasks.md',          party: 'AI'          },
+  { filename: 'User Tasks.md',        party: 'User'        },
+  { filename: 'Inventor Tasks.md',    party: 'Inventor'    },
+  { filename: 'Third Party Tasks.md', party: 'Third Party' },
 ];
 
 interface ArchivedTask { text: string; party: string; }
 
+/** Determine the folder containing task files.
+ *  Matter structure: {root}/01 Tasks/
+ *  Standalone tasks: {root}/ (flat — task files live next to AI Instructions.md) */
+function resolveTasksDir(app: App, matterRoot: string): string {
+  const paths = matterPaths(matterRoot);
+  const tasksFolder = app.vault.getAbstractFileByPath(paths.tasks);
+  if (tasksFolder && 'children' in tasksFolder) return paths.tasks;
+  return matterRoot;
+}
+
 export async function archiveTasks(app: App, log: LogService): Promise<boolean> {
   const matterRoot = await findMatterRoot(app);
   if (matterRoot === null) {
-    const msg = 'Open a file inside a matter folder first.';
+    const msg = 'Open a file inside a matter or tasks folder first.';
     log.error(msg);
     new Notice(msg);
     return false;
   }
 
-  const paths = matterPaths(matterRoot);
-  const logPath = `${paths.tasks}/${LOG_FILENAME}`;
+  const tasksDir = resolveTasksDir(app, matterRoot);
+  const logPath = `${tasksDir}/${LOG_FILENAME}`;
 
   // Collect completed tasks and build updated source content
   const archived: ArchivedTask[] = [];
   const updates: { path: string; content: string }[] = [];
 
   for (const { filename, party } of SOURCE_FILES) {
-    const filePath = `${paths.tasks}/${filename}`;
+    const filePath = `${tasksDir}/${filename}`;
     const tfile = app.vault.getAbstractFileByPath(filePath);
     if (!tfile || 'children' in tfile) continue;
 
@@ -57,7 +68,7 @@ export async function archiveTasks(app: App, log: LogService): Promise<boolean> 
   }
 
   if (archived.length === 0) {
-    const msg = 'No completed tasks ( - [x] ) found in AI Tasks, User Tasks, or Inventor Tasks.';
+    const msg = 'No completed tasks ( - [x] ) found in any task file.';
     log.warn(msg);
     new Notice(msg);
     return false;

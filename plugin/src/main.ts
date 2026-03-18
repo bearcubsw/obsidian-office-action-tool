@@ -2,6 +2,7 @@ import { Plugin, WorkspaceLeaf } from 'obsidian';
 import { SidebarPanel, VIEW_TYPE } from './SidebarPanel';
 import { LogService } from './LogService';
 import { createStructure } from './createStructure';
+import { createTasks } from './createTasks';
 import { createBackup } from './createBackup';
 import { trackChanges } from './trackChanges';
 import { archiveTasks } from './archiveTasks';
@@ -25,6 +26,12 @@ export default class OfficeActionPlugin extends Plugin {
       id: 'create-structure',
       name: 'Office Action: Create Structure',
       callback: () => createStructure(this.app, this.log),
+    });
+
+    this.addCommand({
+      id: 'create-tasks',
+      name: 'Office Action: Create Tasks',
+      callback: () => createTasks(this.app, this.log),
     });
 
     this.addCommand({
