@@ -11,6 +11,8 @@ export class SidebarPanel extends ItemView {
   private logEl: HTMLElement | null = null;
   private notesEl: HTMLElement | null = null;
   private outlineEl: HTMLElement | null = null;
+  /** Last MarkdownView that held focus — never cleared by sidebar clicks. */
+  private lastMdView: MarkdownView | null = null;
 
   constructor(leaf: WorkspaceLeaf, log: LogService) {
     super(leaf);
@@ -54,10 +56,23 @@ export class SidebarPanel extends ItemView {
     this.buildNotesPane(panes['Notes']);
     this.buildLogPane(panes['Log']);
 
-    // Shared refresh for both live-content tabs
-    const refresh = () => { this.renderOutline(); this.renderNotes(); };
-    this.registerEvent(this.app.workspace.on('active-leaf-change', refresh));
-    this.registerEvent(this.app.workspace.on('editor-change', refresh));
+    // Only update when a MarkdownView is actually active.
+    // When the sidebar itself takes focus, active-leaf-change fires with no
+    // MarkdownView — we skip re-render so the outline/notes stay visible.
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+      const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (mdView) {
+        this.lastMdView = mdView;
+        this.renderOutline();
+        this.renderNotes();
+      }
+    }));
+    this.registerEvent(this.app.workspace.on('editor-change', () => {
+      const mdView = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (mdView) this.lastMdView = mdView;
+      this.renderOutline();
+      this.renderNotes();
+    }));
   }
 
   private buildActionsPane(pane: HTMLElement): void {
@@ -117,7 +132,7 @@ export class SidebarPanel extends ItemView {
     if (!this.outlineEl) return;
     this.outlineEl.empty();
 
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const view = this.lastMdView;
     const content = (view?.editor as any)?.getValue() ?? '';
 
     if (!content) {
@@ -155,14 +170,13 @@ export class SidebarPanel extends ItemView {
     if (!this.notesEl) return;
     this.notesEl.empty();
 
-    const file = this.app.workspace.getActiveFile();
-    if (!file) {
+    const view = this.lastMdView;
+    if (!view?.file) {
       this.notesEl.createEl('p', { text: 'No file open.', cls: 'oat-empty' });
       return;
     }
 
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const content = (view?.editor as any)?.getValue() ?? '';
+    const content = (view.editor as any)?.getValue() ?? '';
 
     const footnoteRe = /\[\^([^\]]+)\]:\s*(.+)/g;
     const footnotes: { label: string; text: string; offset: number }[] = [];
@@ -201,11 +215,10 @@ export class SidebarPanel extends ItemView {
 
   /** Focus the editor leaf then scroll to the given character offset. */
   private scrollToOffset(offset: number): void {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const view = this.lastMdView;
     if (!view) return;
     const editor = view.editor as any;
     if (!editor) return;
-    // Re-focus the editor leaf so scrollIntoView takes effect
     (this.app.workspace as any).setActiveLeaf(view.leaf, { focus: true });
     const pos = editor.offsetToPos(offset);
     editor.setCursor(pos);
