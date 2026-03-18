@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.0] — 2026-03-18
+
+### Sidebar Reorganization
+
+- **New tab layout:** Scaffold, Amendments, Outline, Notes, Log
+- **Scaffold tab** — "Office Action" (full matter structure) and "Task Folder" (standalone tasks)
+- **Amendments tab** — "Create Backup" and "Track Changes"
+- **Archive Tasks** removed from sidebar; still available via command palette
+- **Fixed button cropping** — border-radius no longer clips at panel edges
+- **Install script** — `copyplugin.ps1` now detects update vs fresh install
+
 ## [1.2.0] — 2026-03-18
 
 ### Create Tasks — Standalone Task Management
