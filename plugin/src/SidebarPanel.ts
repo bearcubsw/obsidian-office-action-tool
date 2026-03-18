@@ -4,9 +4,15 @@ import { createStructure } from './createStructure';
 import { createTasks } from './createTasks';
 import { createBackup } from './createBackup';
 import { trackChanges } from './trackChanges';
-import { archiveTasks } from './archiveTasks';
 
 export const VIEW_TYPE = 'office-action-tool';
+
+interface ActionItem {
+  label: string;
+  lucideIcon: string;
+  tooltip: string;
+  handler: () => Promise<void>;
+}
 
 export class SidebarPanel extends ItemView {
   private log: LogService;
@@ -34,7 +40,7 @@ export class SidebarPanel extends ItemView {
     const tabBar = root.createDiv({ cls: 'oat-tab-bar' });
     const tabContent = root.createDiv({ cls: 'oat-tab-content' });
 
-    const tabs = ['Actions', 'Outline', 'Notes', 'Log'] as const;
+    const tabs = ['Scaffold', 'Amendments', 'Outline', 'Notes', 'Log'] as const;
     const panes: Record<string, HTMLElement> = {};
 
     tabs.forEach((name, i) => {
@@ -53,7 +59,8 @@ export class SidebarPanel extends ItemView {
       if (i === 0) btn.addClass('oat-tab-active');
     });
 
-    this.buildActionsPane(panes['Actions']);
+    this.buildScaffoldPane(panes['Scaffold']);
+    this.buildAmendmentsPane(panes['Amendments']);
     this.buildOutlinePane(panes['Outline']);
     this.buildNotesPane(panes['Notes']);
     this.buildLogPane(panes['Log']);
@@ -77,12 +84,14 @@ export class SidebarPanel extends ItemView {
     }));
   }
 
-  private buildActionsPane(pane: HTMLElement): void {
-    const actions: { label: string; lucideIcon: string; tooltip: string; handler: () => Promise<void> }[] = [
+  // ── Scaffold tab ──────────────────────────────────────────────────────────
+
+  private buildScaffoldPane(pane: HTMLElement): void {
+    this.buildActionButtons(pane, [
       {
-        label: 'Create Structure',
+        label: 'Office Action',
         lucideIcon: 'folder-plus',
-        tooltip: 'Scaffold matter folder structure and AI Instructions',
+        tooltip: 'Scaffold a full patent prosecution matter folder',
         handler: async () => {
           const countBefore = this.log.entries.length;
           await createStructure(this.app, this.log);
@@ -90,7 +99,7 @@ export class SidebarPanel extends ItemView {
         },
       },
       {
-        label: 'Create Tasks',
+        label: 'Task Folder',
         lucideIcon: 'list-checks',
         tooltip: 'Create a standalone task management folder with AI Instructions',
         handler: async () => {
@@ -99,6 +108,13 @@ export class SidebarPanel extends ItemView {
           this.switchToLogOnError(countBefore);
         },
       },
+    ]);
+  }
+
+  // ── Amendments tab ────────────────────────────────────────────────────────
+
+  private buildAmendmentsPane(pane: HTMLElement): void {
+    this.buildActionButtons(pane, [
       {
         label: 'Create Backup',
         lucideIcon: 'archive',
@@ -119,18 +135,12 @@ export class SidebarPanel extends ItemView {
           this.switchToLogOnError(countBefore);
         },
       },
-      {
-        label: 'Archive Tasks',
-        lucideIcon: 'check-check',
-        tooltip: 'Move completed tasks ( - [x] ) from AI Tasks, User Tasks, and Inventor Tasks into Completed Tasks Log',
-        handler: async () => {
-          const countBefore = this.log.entries.length;
-          await archiveTasks(this.app, this.log);
-          this.switchToLogOnError(countBefore);
-        },
-      },
-    ];
+    ]);
+  }
 
+  // ── Shared button builder ─────────────────────────────────────────────────
+
+  private buildActionButtons(pane: HTMLElement, actions: ActionItem[]): void {
     for (const action of actions) {
       const btn = pane.createEl('button', {
         cls: 'oat-action-btn',

@@ -40,9 +40,14 @@
   overflow: auto;
 }
 
+.oat-pane {
+  padding: 4px 2px;
+}
+
 .oat-action-btn {
   display: block;
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   margin-bottom: 8px;
   background: var(--interactive-normal);
