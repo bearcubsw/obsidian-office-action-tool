@@ -3,22 +3,22 @@ import { LogService } from './LogService';
 import { AI_INSTRUCTIONS_CONTENT } from './aiInstructionsTemplate';
 
 const SUBFOLDERS = [
-  '01 Prior Filings',
-  '02 Amendments and Remarks',
-  '02 Amendments and Remarks/01 Track Changes Originals',
-  '02 Amendments and Remarks/02 Track Changes USPTO Markup',
-  '02 Amendments and Remarks/03 Versions',
-  '02 Amendments and Remarks/04 Prior Art',
+  '01 Tasks',
+  '02 USPTO Records',
   '03 Strategy',
   '04 Meetings',
-  '05 Tasks',
+  '05 Prior Art',
+  '06 Amendments',
+  '06 Amendments/01 Versions',
+  '06 Amendments/02 USPTO Output',
+  '07 Remarks',
 ];
 
 const PRIOR_ART_INDEX = `# Prior Art Index
 
 ## References
 
-<!-- Add prior art entries here. Each reference should have a subfolder under 04 Prior Art/. -->
+<!-- Add prior art entries here. Each reference should have a subfolder under 05 Prior Art/. -->
 
 ## Timeline
 
@@ -34,11 +34,17 @@ function placeholderFiles(root: string): Record<string, string> {
   const p = (sub: string) => `${root}/${sub}`;
   return {
     [p('AI Instructions.md')]: AI_INSTRUCTIONS_CONTENT,
-    [p('02 Amendments and Remarks/Remarks.md')]: '# Remarks\n\n',
-    [p('02 Amendments and Remarks/04 Prior Art/index with Mermaid Timeline.md')]: PRIOR_ART_INDEX,
-    [p('03 Strategy/Strategy Index.md')]: '# Strategy Index\n\n',
-    [p('05 Tasks/AI Tasks.md')]: '# AI Tasks\n\n<!-- Checkbox list of tasks assigned to the AI. Use subtasks and bullets as needed. -->\n\n',
-    [p('05 Tasks/User Tasks.md')]: '# User Tasks\n\n<!-- Checkbox list of tasks for the attorney/user. AI monitors this and may assist. -->\n\n',
+    [p('index.md')]: '# Matter Index\n\n<!-- AI: maintain this index with links to all subfolders and a brief matter overview. -->\n',
+    [p('01 Tasks/index.md')]: '# Tasks Index\n\n<!-- AI: maintain links to task files and summary of open items. -->\n',
+    [p('01 Tasks/AI Tasks.md')]: '# AI Tasks\n\n<!-- Checkbox list of tasks assigned to the AI. Use subtasks and bullets as needed. -->\n\n',
+    [p('01 Tasks/User Tasks.md')]: '# User Tasks\n\n<!-- Checkbox list of tasks for the attorney/user. AI monitors this and may assist. -->\n\n',
+    [p('01 Tasks/Inventor Tasks.md')]: '# Inventor Tasks\n\n<!-- Checkbox list of questions and tasks for the inventor/applicant. -->\n\n',
+    [p('02 USPTO Records/index.md')]: '# USPTO Records Index\n\n<!-- AI: maintain a chronological listing of all filings and office actions. -->\n',
+    [p('03 Strategy/index.md')]: '# Strategy Index\n\n<!-- AI: maintain links to strategy notes and a running summary. -->\n',
+    [p('04 Meetings/index.md')]: '# Meetings Index\n\n<!-- AI: maintain links to meeting notes with dates and summaries. -->\n',
+    [p('05 Prior Art/index.md')]: PRIOR_ART_INDEX,
+    [p('07 Remarks/index.md')]: '# Remarks Index\n\n<!-- AI: maintain links to remarks documents and a summary of arguments. -->\n',
+    [p('07 Remarks/Remarks.md')]: '# Remarks\n\n',
   };
 }
 

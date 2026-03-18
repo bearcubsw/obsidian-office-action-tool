@@ -2,18 +2,27 @@ import { archiveTasks } from '../src/archiveTasks';
 import { LogService } from '../src/LogService';
 import { MockApp, makeFile } from './helpers';
 
-function setupApp(matterRoot: string, aiContent: string, userContent: string, logContent?: string) {
+function setupApp(
+  matterRoot: string,
+  aiContent: string,
+  userContent: string,
+  logContent?: string,
+  inventorContent?: string,
+) {
   const app = new MockApp();
   app.vault.files.set(`${matterRoot}/AI Instructions.md`, '# AI Instructions');
   app.vault.folders.add(matterRoot);
-  app.vault.folders.add(`${matterRoot}/05 Tasks`);
-  app.vault.files.set(`${matterRoot}/05 Tasks/AI Tasks.md`,   aiContent);
-  app.vault.files.set(`${matterRoot}/05 Tasks/User Tasks.md`, userContent);
+  app.vault.folders.add(`${matterRoot}/01 Tasks`);
+  app.vault.files.set(`${matterRoot}/01 Tasks/AI Tasks.md`, aiContent);
+  app.vault.files.set(`${matterRoot}/01 Tasks/User Tasks.md`, userContent);
+  if (inventorContent !== undefined) {
+    app.vault.files.set(`${matterRoot}/01 Tasks/Inventor Tasks.md`, inventorContent);
+  }
   if (logContent !== undefined) {
-    app.vault.files.set(`${matterRoot}/05 Tasks/Tasks Change Log.md`, logContent);
+    app.vault.files.set(`${matterRoot}/01 Tasks/Completed Tasks Log.md`, logContent);
   }
   // Active file inside the matter folder
-  app.workspace.setActiveFile(makeFile(`${matterRoot}/05 Tasks/AI Tasks.md`));
+  app.workspace.setActiveFile(makeFile(`${matterRoot}/01 Tasks/AI Tasks.md`));
   return app;
 }
 
@@ -38,14 +47,25 @@ describe('archiveTasks', () => {
     expect(log.entries.some(e => e.level === 'warn')).toBe(true);
   });
 
-  test('creates Tasks Change Log when it does not exist', async () => {
+  test('creates Completed Tasks Log when it does not exist', async () => {
     const app = setupApp('matter',
       '# AI Tasks\n\n- [x] Draft the claims\n',
       '# User Tasks\n',
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    expect(app.vault.files.has('matter/05 Tasks/Tasks Change Log.md')).toBe(true);
+    expect(app.vault.files.has('matter/01 Tasks/Completed Tasks Log.md')).toBe(true);
+  });
+
+  test('log table includes Notes column', async () => {
+    const app = setupApp('matter',
+      '# AI Tasks\n\n- [x] Draft the claims\n',
+      '# User Tasks\n',
+    );
+    const log = new LogService();
+    await archiveTasks(app as any, log);
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
+    expect(logContent).toContain('| #   | Party | Task | Notes | Date-Time |');
   });
 
   test('appends completed tasks to new log with correct format', async () => {
@@ -55,9 +75,9 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const logContent = app.vault.files.get('matter/05 Tasks/Tasks Change Log.md')!;
-    expect(logContent).toContain('| 1 | AI | Draft the claims |');
-    expect(logContent).toContain('| 2 | User | Sign the declaration |');
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
+    expect(logContent).toContain('| 1 | AI | Draft the claims | |');
+    expect(logContent).toContain('| 2 | User | Sign the declaration | |');
   });
 
   test('removes completed tasks from source files', async () => {
@@ -67,10 +87,10 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const aiContent = app.vault.files.get('matter/05 Tasks/AI Tasks.md')!;
+    const aiContent = app.vault.files.get('matter/01 Tasks/AI Tasks.md')!;
     expect(aiContent).not.toContain('- [x] Done task');
     expect(aiContent).toContain('- [ ] Pending task');
-    const userContent = app.vault.files.get('matter/05 Tasks/User Tasks.md')!;
+    const userContent = app.vault.files.get('matter/01 Tasks/User Tasks.md')!;
     expect(userContent).not.toContain('- [x] User done');
   });
 
@@ -81,18 +101,18 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const aiContent = app.vault.files.get('matter/05 Tasks/AI Tasks.md')!;
+    const aiContent = app.vault.files.get('matter/01 Tasks/AI Tasks.md')!;
     expect(aiContent).toContain('- [ ] Pending A');
     expect(aiContent).toContain('- [ ] Pending B');
   });
 
   test('appends to existing log and continues numbering', async () => {
     const existingLog =
-      '# Tasks Change Log — matter\n\n' +
-      '| #   | Party | Task | Date-Time |\n' +
-      '| --- | ----- | ---- | ---------- |\n' +
-      '| 1 | AI | Old task | 2026-01-01 |\n' +
-      '| 2 | User | Another old | 2026-01-02 |\n';
+      '# Completed Tasks Log — matter\n\n' +
+      '| #   | Party | Task | Notes | Date-Time |\n' +
+      '| --- | ----- | ---- | ----- | ---------- |\n' +
+      '| 1 | AI | Old task | | 2026-01-01 |\n' +
+      '| 2 | User | Another old | | 2026-01-02 |\n';
     const app = setupApp('matter',
       '# AI Tasks\n\n- [x] New task\n',
       '# User Tasks\n',
@@ -100,7 +120,7 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const logContent = app.vault.files.get('matter/05 Tasks/Tasks Change Log.md')!;
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
     expect(logContent).toContain('| 3 | AI | New task |');
   });
 
@@ -108,15 +128,29 @@ describe('archiveTasks', () => {
     const app = new MockApp();
     app.vault.files.set('matter/AI Instructions.md', '# AI Instructions');
     app.vault.folders.add('matter');
-    app.vault.folders.add('matter/05 Tasks');
-    // Only AI Tasks.md — no User Tasks.md
-    app.vault.files.set('matter/05 Tasks/AI Tasks.md', '# AI Tasks\n\n- [x] Solo task\n');
-    app.workspace.setActiveFile(makeFile('matter/05 Tasks/AI Tasks.md'));
+    app.vault.folders.add('matter/01 Tasks');
+    // Only AI Tasks.md — no User Tasks.md or Inventor Tasks.md
+    app.vault.files.set('matter/01 Tasks/AI Tasks.md', '# AI Tasks\n\n- [x] Solo task\n');
+    app.workspace.setActiveFile(makeFile('matter/01 Tasks/AI Tasks.md'));
     const log = new LogService();
     const result = await archiveTasks(app as any, log);
     expect(result).toBe(true);
-    const logContent = app.vault.files.get('matter/05 Tasks/Tasks Change Log.md')!;
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
     expect(logContent).toContain('Solo task');
+  });
+
+  test('archives tasks from Inventor Tasks.md with Inventor party', async () => {
+    const app = setupApp('matter',
+      '# AI Tasks\n',
+      '# User Tasks\n',
+      undefined,
+      '# Inventor Tasks\n\n- [x] Provide prior art dates\n',
+    );
+    const log = new LogService();
+    await archiveTasks(app as any, log);
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
+    expect(logContent).toContain('| Inventor |');
+    expect(logContent).toContain('Provide prior art dates');
   });
 
   test('logs success with task count', async () => {
@@ -136,7 +170,7 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const logContent = app.vault.files.get('matter/05 Tasks/Tasks Change Log.md')!;
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
     expect(logContent).toContain('Task A \\| B');
   });
 
@@ -147,9 +181,9 @@ describe('archiveTasks', () => {
     );
     const log = new LogService();
     await archiveTasks(app as any, log);
-    const logContent = app.vault.files.get('matter/05 Tasks/Tasks Change Log.md')!;
+    const logContent = app.vault.files.get('matter/01 Tasks/Completed Tasks Log.md')!;
     expect(logContent).toContain('Child task done');
-    const aiContent = app.vault.files.get('matter/05 Tasks/AI Tasks.md')!;
+    const aiContent = app.vault.files.get('matter/01 Tasks/AI Tasks.md')!;
     expect(aiContent).not.toContain('Child task done');
   });
 });

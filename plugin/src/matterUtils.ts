@@ -30,14 +30,14 @@ export async function findMatterRoot(app: App): Promise<string | null> {
 export function matterPaths(root: string) {
   const p = (sub: string) => root ? `${root}/${sub}` : sub;
   return {
-    priorFilings: p('01 Prior Filings'),
-    amendments: p('02 Amendments and Remarks'),
-    originals: p('02 Amendments and Remarks/01 Track Changes Originals'),
-    usptoMarkup: p('02 Amendments and Remarks/02 Track Changes USPTO Markup'),
-    versions: p('02 Amendments and Remarks/03 Versions'),
-    priorArt: p('02 Amendments and Remarks/04 Prior Art'),
-    strategy: p('03 Strategy'),
-    meetings: p('04 Meetings'),
-    tasks: p('05 Tasks'),
+    tasks:        p('01 Tasks'),
+    usptoRecords: p('02 USPTO Records'),
+    strategy:     p('03 Strategy'),
+    meetings:     p('04 Meetings'),
+    priorArt:     p('05 Prior Art'),
+    amendments:   p('06 Amendments'),
+    versions:     p('06 Amendments/01 Versions'),
+    usptoOutput:  p('06 Amendments/02 USPTO Output'),
+    remarks:      p('07 Remarks'),
   };
 }

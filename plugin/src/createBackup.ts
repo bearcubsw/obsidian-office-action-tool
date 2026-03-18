@@ -21,10 +21,10 @@ export async function createBackup(app: App, log: LogService): Promise<boolean> 
   const amendmentsDir = paths.amendments;
   const versionsDir = paths.versions;
 
-  // Ensure 03 Versions/ exists
+  // Ensure 01 Versions/ exists
   if (!app.vault.getAbstractFileByPath(versionsDir)) {
     await app.vault.createFolder(versionsDir);
-    log.info(`Created folder: 03 Versions/`);
+    log.info(`Created folder: 01 Versions/`);
   }
 
   // Collect .md files directly in amendments root (not in subfolders)
@@ -35,7 +35,7 @@ export async function createBackup(app: App, log: LogService): Promise<boolean> 
   });
 
   if (amendmentFiles.length === 0) {
-    const msg = `No markdown files found directly in 02 Amendments and Remarks/ (subfolders are excluded).`;
+    const msg = `No markdown files found directly in 06 Amendments/ (subfolders are excluded).`;
     log.warn(msg);
     new Notice(msg);
     return false;
@@ -44,15 +44,17 @@ export async function createBackup(app: App, log: LogService): Promise<boolean> 
   const timestamp = nowYYYYMMDDHHMM();
   const snapshotDir = `${versionsDir}/${timestamp}`;
   await app.vault.createFolder(snapshotDir);
-  log.info(`Created snapshot folder: 03 Versions/${timestamp}`);
+  log.info(`Created snapshot folder: 01 Versions/${timestamp}`);
 
   for (const file of amendmentFiles) {
-    const destPath = `${snapshotDir}/${file.name}`;
+    const baseName = file.name.replace(/\.md$/, '');
+    const destName = `${baseName} - ${timestamp}.md`;
+    const destPath = `${snapshotDir}/${destName}`;
     await app.vault.copy(file, destPath);
-    log.info(`Copied: ${file.name}`);
+    log.info(`Copied: ${file.name} → ${destName}`);
   }
 
-  const msg = `Backup created: 03 Versions/${timestamp} (${amendmentFiles.length} files)`;
+  const msg = `Backup created: 01 Versions/${timestamp} (${amendmentFiles.length} files)`;
   log.success(msg);
   new Notice(msg);
   return true;

@@ -4,20 +4,39 @@ export const AI_INSTRUCTIONS_CONTENT = `# AI Instructions — Patent Prosecution
 
 This vault manages a single patent prosecution matter. Folder purposes:
 
-- **01 Prior Filings/** — Original USPTO documents and prior submissions. Read-only reference. Contains specifications, claims, abstracts, office actions, and responses.
-- **02 Amendments and Remarks/** — Active working documents for the current amendment round.
-  - **01 Track Changes Originals/** — Baseline copies from the start of this cycle. Do not modify.
-  - **02 Track Changes USPTO Markup/** — Generated track-changes output. Do not modify manually.
-  - **03 Versions/** — Timestamped backups (YYYYMMDDHHMM format). Read-only reference.
-  - **04 Prior Art/** — Prior art references, one subfolder per reference.
-  - **Remarks.md** — Attorney remarks draft for the current response.
-- **03 Strategy/** — Strategic notes and analysis.
-  - **Strategy Index.md** — Master strategy document. Update as strategy evolves.
-- **04 Meetings/** — Meeting notes. Subfolder or file per meeting (YYYYMMDD -- Description).
-- **05 Tasks/**
+- **index.md** — Matter overview and navigation hub. AI: keep updated with links to all folders.
+- **01 Tasks/** — Action items for all parties.
   - **AI Tasks.md** — Your task list. Execute these. Mark complete when done.
   - **User Tasks.md** — Attorney task list. Monitor and offer help where you can.
+  - **Inventor Tasks.md** — Questions and tasks for the inventor/applicant. Prompts to ensure all parties contribute.
+  - **Completed Tasks Log.md** — Auto-generated log of archived completed tasks.
+  - **index.md** — Summary of open items and links to task files.
+- **02 USPTO Records/** — Original USPTO documents and prior submissions. Read-only reference. Contains specifications, claims, abstracts, office actions, and responses.
+  - **index.md** — Chronological listing of all filings and office actions.
+- **03 Strategy/** — Strategic notes and analysis.
+  - **index.md** — Running summary and links to strategy notes. Update as strategy evolves.
+- **04 Meetings/** — Meeting notes. Subfolder or file per meeting (YYYYMMDD -- Description).
+  - **index.md** — Links to meeting notes with dates and summaries.
+- **05 Prior Art/** — Prior art references, one subfolder per reference.
+  - **index.md** — Reference listing with Mermaid Gantt timeline.
+- **06 Amendments/** — Active working documents for claim, specification, and abstract amendments.
+  - **01 Versions/** — Timestamped backups. The first version folder serves as the track changes baseline.
+  - **02 USPTO Output/** — Generated track-changes markup. Do not modify manually.
+- **07 Remarks/** — Attorney remarks and arguments for the current response.
+  - **Remarks.md** — The remarks document.
+  - **index.md** — Summary of arguments and links.
 - **AI Instructions.md** — This file. Your operating directive.
+
+## Index Management
+
+You are responsible for maintaining the \`index.md\` file in every folder (except \`06 Amendments/\`, which is a working folder managed by the plugin).
+
+Each \`index.md\` should contain:
+1. A brief introduction describing the folder's purpose and current state
+2. Links to all files and subfolders within
+3. A narrative summary that helps the reader navigate the matter via Obsidian
+
+Update indexes whenever files are added, removed, or significantly changed. Keep them current so the attorney can navigate the full matter through linked index files.
 
 ## File Naming Conventions
 
@@ -37,24 +56,27 @@ Document type codes:
 You are the AI assistant for patent prosecution workflow on this matter.
 
 ### Task Management
-- Read \`05 Tasks/AI Tasks.md\` at the start of each session
+- Read \`01 Tasks/AI Tasks.md\` at the start of each session
 - Execute open tasks (\`- [ ]\`) and mark complete (\`- [x]\`) when done
 - Add sub-tasks if a task requires multiple steps
-- Review \`05 Tasks/User Tasks.md\` — if you can assist with any user tasks, note it
+- Review \`01 Tasks/User Tasks.md\` — if you can assist with any user tasks, note it
+- Add questions for the inventor/applicant to \`01 Tasks/Inventor Tasks.md\`
+- Completed tasks are archived to \`01 Tasks/Completed Tasks Log.md\` by the plugin's Archive Tasks command
 
 ### Prior Art Management
-When PDF or document files are added to \`02 Amendments and Remarks/04 Prior Art/\`:
+When references are added to \`05 Prior Art/\`:
 1. Create a subfolder for each new reference (e.g., \`01 US12345678 Widget/\`)
-2. Add an entry in \`index with Mermaid Timeline.md\`: reference number, title, date, key claims
-3. Update the Mermaid Gantt chart with the reference's relevant date
-4. Note in \`AI Tasks.md\` if the reference requires further analysis
+2. Update \`05 Prior Art/index.md\`: add entry with reference number, title, date, key claims
+3. Update the Mermaid Gantt chart in the index with the reference's relevant date
+4. Note in \`01 Tasks/AI Tasks.md\` if the reference requires further analysis
 
 ### Footnote Review
-When reviewing documents, look for footnotes (\`[^n]: text\`). These are attorney annotations. If a footnote raises a question or task you can address, do so and note it in \`AI Tasks.md\`.
+When reviewing documents, look for footnotes (\`[^n]: text\`). These are attorney annotations. If a footnote raises a question or task you can address, do so and note it in \`01 Tasks/AI Tasks.md\`.
 
 ### Document Maintenance
-- Keep \`03 Strategy/Strategy Index.md\` updated as strategy develops
+- Keep \`03 Strategy/index.md\` updated as strategy develops
 - When meeting notes are added to \`04 Meetings/\`, extract action items and add them to the appropriate task file
+- Update relevant \`index.md\` files whenever content changes
 
 ## Claims Format
 
@@ -70,14 +92,15 @@ Claims use an enumerated outline format:
 
 ## Track Changes Workflow
 
-1. When starting a new amendment round: attorney clicks "Track Changes" to prime originals
-2. Attorney edits working documents in \`02 Amendments and Remarks/\`
-3. Attorney clicks "Track Changes" again to generate USPTO-formatted markup in \`02 Track Changes USPTO Markup/\`
-4. To start a fresh cycle: manually delete files in \`01 Track Changes Originals/\` and re-prime
+1. Place working copies of specification, claims, and abstract in \`06 Amendments/\`
+2. Click "Create Backup" to snapshot current state to \`01 Versions/\` — the first backup establishes the baseline
+3. Edit working documents in \`06 Amendments/\`
+4. Click "Track Changes" to generate USPTO-formatted markup in \`02 USPTO Output/\`
+5. To start a fresh amendment cycle: delete existing version folders in \`01 Versions/\` and create a new backup
 
 ## Communication Style
 - Be concise and task-oriented
-- When you identify questions for the inventor, add them to \`05 Tasks/User Tasks.md\`
+- When you identify questions for the inventor, add them to \`01 Tasks/Inventor Tasks.md\`
 - When you complete a task, briefly state what you did
 - Flag claim scope issues, prior art overlap, or specification support gaps as you notice them
 `;

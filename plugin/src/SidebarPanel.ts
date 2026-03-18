@@ -101,7 +101,7 @@ export class SidebarPanel extends ItemView {
       {
         label: 'Track Changes',
         lucideIcon: 'git-compare',
-        tooltip: 'Prime originals or generate USPTO-formatted track changes',
+        tooltip: 'Generate USPTO-formatted track changes from version baseline',
         handler: async () => {
           const countBefore = this.log.entries.length;
           await trackChanges(this.app, this.log);
@@ -111,7 +111,7 @@ export class SidebarPanel extends ItemView {
       {
         label: 'Archive Tasks',
         lucideIcon: 'check-check',
-        tooltip: 'Move completed tasks ( - [x] ) from AI Tasks and User Tasks into Tasks Change Log',
+        tooltip: 'Move completed tasks ( - [x] ) from AI Tasks, User Tasks, and Inventor Tasks into Completed Tasks Log',
         handler: async () => {
           const countBefore = this.log.entries.length;
           await archiveTasks(this.app, this.log);

@@ -1,9 +1,9 @@
 {
   "id": "office-action-tool",
   "name": "Office Action Tool",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "minAppVersion": "1.4.0",
-  "description": "Patent prosecution workflow tools: Create Structure, Backup, and Track Changes.",
+  "description": "Patent prosecution workflow tools: Create Structure, Backup, Track Changes, and Archive Tasks.",
   "author": "",
   "authorUrl": "",
   "isDesktopOnly": true

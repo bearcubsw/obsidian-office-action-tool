@@ -1,4 +1,4 @@
-import { findMatterRoot } from '../src/matterUtils';
+import { findMatterRoot, matterPaths } from '../src/matterUtils';
 import { MockApp, makeFile } from './helpers';
 
 describe('findMatterRoot', () => {
@@ -23,8 +23,8 @@ describe('findMatterRoot', () => {
     const app = new MockApp();
     app.vault.files.set('matter/AI Instructions.md', '# AI Instructions');
     app.vault.folders.add('matter');
-    app.vault.folders.add('matter/02 Amendments and Remarks');
-    const file = makeFile('matter/02 Amendments and Remarks/spec.md');
+    app.vault.folders.add('matter/06 Amendments');
+    const file = makeFile('matter/06 Amendments/spec.md');
     app.workspace.setActiveFile(file);
     const result = await findMatterRoot(app as any);
     expect(result).toBe('matter');
@@ -34,7 +34,7 @@ describe('findMatterRoot', () => {
     const app = new MockApp();
     app.vault.files.set('matters/case1/AI Instructions.md', '# AI Instructions');
     app.vault.folders.add('matters/case1');
-    const file = makeFile('matters/case1/02 Amendments and Remarks/03 Versions/snap/spec.md');
+    const file = makeFile('matters/case1/06 Amendments/01 Versions/snap/spec.md');
     app.workspace.setActiveFile(file);
     const result = await findMatterRoot(app as any);
     expect(result).toBe('matters/case1');
@@ -56,5 +56,33 @@ describe('findMatterRoot', () => {
     app.workspace.setActiveFile(file);
     const result = await findMatterRoot(app as any);
     expect(result).toBeNull();
+  });
+});
+
+describe('matterPaths', () => {
+  test('returns correct v2 paths', () => {
+    const paths = matterPaths('matter');
+    expect(paths.tasks).toBe('matter/01 Tasks');
+    expect(paths.usptoRecords).toBe('matter/02 USPTO Records');
+    expect(paths.strategy).toBe('matter/03 Strategy');
+    expect(paths.meetings).toBe('matter/04 Meetings');
+    expect(paths.priorArt).toBe('matter/05 Prior Art');
+    expect(paths.amendments).toBe('matter/06 Amendments');
+    expect(paths.versions).toBe('matter/06 Amendments/01 Versions');
+    expect(paths.usptoOutput).toBe('matter/06 Amendments/02 USPTO Output');
+    expect(paths.remarks).toBe('matter/07 Remarks');
+  });
+
+  test('handles empty root', () => {
+    const paths = matterPaths('');
+    expect(paths.tasks).toBe('01 Tasks');
+    expect(paths.amendments).toBe('06 Amendments');
+  });
+
+  test('does not include legacy v1 paths', () => {
+    const paths = matterPaths('matter') as any;
+    expect(paths.priorFilings).toBeUndefined();
+    expect(paths.originals).toBeUndefined();
+    expect(paths.usptoMarkup).toBeUndefined();
   });
 });

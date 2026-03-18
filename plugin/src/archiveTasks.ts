@@ -2,12 +2,13 @@ import { App, Notice } from 'obsidian';
 import { LogService } from './LogService';
 import { findMatterRoot, matterPaths } from './matterUtils';
 
-const LOG_FILENAME = 'Tasks Change Log.md';
+const LOG_FILENAME = 'Completed Tasks Log.md';
 const DONE_RE = /^(\s*)-\s+\[x\]\s+(.*)$/;
 
 const SOURCE_FILES: { filename: string; party: string }[] = [
-  { filename: 'AI Tasks.md',   party: 'AI'   },
-  { filename: 'User Tasks.md', party: 'User' },
+  { filename: 'AI Tasks.md',       party: 'AI'       },
+  { filename: 'User Tasks.md',     party: 'User'     },
+  { filename: 'Inventor Tasks.md', party: 'Inventor' },
 ];
 
 interface ArchivedTask { text: string; party: string; }
@@ -56,7 +57,7 @@ export async function archiveTasks(app: App, log: LogService): Promise<boolean> 
   }
 
   if (archived.length === 0) {
-    const msg = 'No completed tasks ( - [x] ) found in AI Tasks or User Tasks.';
+    const msg = 'No completed tasks ( - [x] ) found in AI Tasks, User Tasks, or Inventor Tasks.';
     log.warn(msg);
     new Notice(msg);
     return false;
@@ -80,13 +81,13 @@ export async function archiveTasks(app: App, log: LogService): Promise<boolean> 
     }
   } else {
     const folderName = matterRoot.split('/').pop() ?? matterRoot;
-    logContent = `# Tasks Change Log — ${folderName}\n\n| #   | Party | Task | Date-Time |\n| --- | ----- | ---- | ---------- |\n`;
+    logContent = `# Completed Tasks Log — ${folderName}\n\n| #   | Party | Task | Notes | Date-Time |\n| --- | ----- | ---- | ----- | ---------- |\n`;
   }
 
   // Build new rows (escape any pipe chars in task text)
   const newRows = archived.map(({ text, party }, i) => {
     const safeText = text.replace(/\|/g, '\\|');
-    return `| ${nextNum + i} | ${party} | ${safeText} | ${today} |`;
+    return `| ${nextNum + i} | ${party} | ${safeText} | | ${today} |`;
   }).join('\n');
 
   const updatedLog = logContent.trimEnd() + '\n' + newRows + '\n';
@@ -106,7 +107,7 @@ export async function archiveTasks(app: App, log: LogService): Promise<boolean> 
   }
 
   const noun = archived.length === 1 ? 'task' : 'tasks';
-  const msg = `Archived ${archived.length} completed ${noun} to Tasks Change Log.`;
+  const msg = `Archived ${archived.length} completed ${noun} to Completed Tasks Log.`;
   log.success(msg);
   new Notice(msg);
   return true;
