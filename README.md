@@ -14,9 +14,15 @@ An Obsidian plugin for patent prosecution workflow and general-purpose task mana
 
 ## Install
 
-### Option 1: PowerShell (recommended)
+### Option 1: PowerShell script
 
-Open PowerShell and run, replacing the vault path with your own:
+If you have the repo cloned, run:
+
+```powershell
+.\scripts\copyplugin.ps1 "C:\path\to\your\vault"
+```
+
+Or as a one-liner without cloning:
 
 ```powershell
 $vault = "C:\path\to\your\vault"
