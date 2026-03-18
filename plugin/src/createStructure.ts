@@ -22,7 +22,8 @@ const PRIOR_ART_INDEX = `# Prior Art Index
 
 ## Timeline
 
-\`\`\`gantt
+\`\`\`mermaid
+gantt
     title Patent Prosecution Timeline
     dateFormat  YYYY-MM-DD
     section Prior Art

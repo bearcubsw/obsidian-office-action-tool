@@ -96,7 +96,8 @@ Claims use an enumerated outline format:
 
 ## Timeline
 
-\`\`\`gantt
+\`\`\`mermaid
+gantt
     title Patent Prosecution Timeline
     dateFormat  YYYY-MM-DD
     section Prior Art
