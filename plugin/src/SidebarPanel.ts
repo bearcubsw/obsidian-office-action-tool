@@ -3,6 +3,7 @@ import { LogService, LogLevel } from './LogService';
 import { createStructure } from './createStructure';
 import { createBackup } from './createBackup';
 import { trackChanges } from './trackChanges';
+import { archiveTasks } from './archiveTasks';
 
 export const VIEW_TYPE = 'office-action-tool';
 
@@ -104,6 +105,16 @@ export class SidebarPanel extends ItemView {
         handler: async () => {
           const countBefore = this.log.entries.length;
           await trackChanges(this.app, this.log);
+          this.switchToLogOnError(countBefore);
+        },
+      },
+      {
+        label: 'Archive Tasks',
+        lucideIcon: 'check-check',
+        tooltip: 'Move completed tasks ( - [x] ) from AI Tasks and User Tasks into Tasks Change Log',
+        handler: async () => {
+          const countBefore = this.log.entries.length;
+          await archiveTasks(this.app, this.log);
           this.switchToLogOnError(countBefore);
         },
       },

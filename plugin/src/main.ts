@@ -4,6 +4,7 @@ import { LogService } from './LogService';
 import { createStructure } from './createStructure';
 import { createBackup } from './createBackup';
 import { trackChanges } from './trackChanges';
+import { archiveTasks } from './archiveTasks';
 
 export default class OfficeActionPlugin extends Plugin {
   private log!: LogService;
@@ -36,6 +37,12 @@ export default class OfficeActionPlugin extends Plugin {
       id: 'track-changes',
       name: 'Office Action: Track Changes',
       callback: () => trackChanges(this.app, this.log),
+    });
+
+    this.addCommand({
+      id: 'archive-tasks',
+      name: 'Office Action: Archive Tasks',
+      callback: () => archiveTasks(this.app, this.log),
     });
 
     // Ribbon icon to open/focus the panel

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-office-action-tool",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Patent prosecution workflow tools for Obsidian",
   "main": "main.js",
   "scripts": {
