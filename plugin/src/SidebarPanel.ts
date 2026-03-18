@@ -10,6 +10,7 @@ export class SidebarPanel extends ItemView {
   private log: LogService;
   private logEl: HTMLElement | null = null;
   private notesEl: HTMLElement | null = null;
+  private outlineEl: HTMLElement | null = null;
 
   constructor(leaf: WorkspaceLeaf, log: LogService) {
     super(leaf);
@@ -26,11 +27,10 @@ export class SidebarPanel extends ItemView {
     root.empty();
     root.addClass('oat-panel');
 
-    // --- Tab bar ---
     const tabBar = root.createDiv({ cls: 'oat-tab-bar' });
     const tabContent = root.createDiv({ cls: 'oat-tab-content' });
 
-    const tabs = ['Actions', 'Notes', 'Log'] as const;
+    const tabs = ['Actions', 'Outline', 'Notes', 'Log'] as const;
     const panes: Record<string, HTMLElement> = {};
 
     tabs.forEach((name, i) => {
@@ -50,8 +50,14 @@ export class SidebarPanel extends ItemView {
     });
 
     this.buildActionsPane(panes['Actions']);
+    this.buildOutlinePane(panes['Outline']);
     this.buildNotesPane(panes['Notes']);
     this.buildLogPane(panes['Log']);
+
+    // Shared refresh for both live-content tabs
+    const refresh = () => { this.renderOutline(); this.renderNotes(); };
+    this.registerEvent(this.app.workspace.on('active-leaf-change', refresh));
+    this.registerEvent(this.app.workspace.on('editor-change', refresh));
   }
 
   private buildActionsPane(pane: HTMLElement): void {
@@ -100,17 +106,49 @@ export class SidebarPanel extends ItemView {
     }
   }
 
+  // ── Outline ────────────────────────────────────────────────────────────────
+
+  private buildOutlinePane(pane: HTMLElement): void {
+    this.outlineEl = pane.createDiv({ cls: 'oat-outline-list' });
+    this.renderOutline();
+  }
+
+  private renderOutline(): void {
+    if (!this.outlineEl) return;
+    this.outlineEl.empty();
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const content = (view?.editor as any)?.getValue() ?? '';
+
+    if (!content) {
+      this.outlineEl.createEl('p', { text: 'No file open.', cls: 'oat-empty' });
+      return;
+    }
+
+    const headingRe = /^(#{1,6})\s+(.+)/gm;
+    const headings: { level: number; text: string; offset: number }[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = headingRe.exec(content)) !== null) {
+      headings.push({ level: m[1].length, text: m[2].trim(), offset: m.index });
+    }
+
+    if (headings.length === 0) {
+      this.outlineEl.createEl('p', { text: 'No headings in current document.', cls: 'oat-empty' });
+      return;
+    }
+
+    for (const h of headings) {
+      const item = this.outlineEl.createDiv({ cls: `oat-outline-item oat-outline-h${h.level}` });
+      item.createSpan({ text: h.text });
+      item.onclick = () => this.scrollToOffset(h.offset);
+    }
+  }
+
+  // ── Notes ──────────────────────────────────────────────────────────────────
+
   private buildNotesPane(pane: HTMLElement): void {
     this.notesEl = pane.createDiv({ cls: 'oat-notes-list' });
     this.renderNotes();
-
-    // Update when active file changes
-    this.registerEvent(
-      this.app.workspace.on('active-leaf-change', () => this.renderNotes())
-    );
-    this.registerEvent(
-      this.app.workspace.on('editor-change', () => this.renderNotes())
-    );
   }
 
   private renderNotes(): void {
@@ -126,12 +164,11 @@ export class SidebarPanel extends ItemView {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     const content = (view?.editor as any)?.getValue() ?? '';
 
-    // Parse footnote definitions: [^label]: text
     const footnoteRe = /\[\^([^\]]+)\]:\s*(.+)/g;
-    const footnotes: { label: string; text: string }[] = [];
-    let match;
+    const footnotes: { label: string; text: string; offset: number }[] = [];
+    let match: RegExpExecArray | null;
     while ((match = footnoteRe.exec(content)) !== null) {
-      footnotes.push({ label: match[1], text: match[2] });
+      footnotes.push({ label: match[1], text: match[2], offset: match.index });
     }
 
     if (footnotes.length === 0) {
@@ -143,23 +180,39 @@ export class SidebarPanel extends ItemView {
       const item = this.notesEl.createDiv({ cls: 'oat-note-item' });
       item.createSpan({ text: `[^${fn.label}]`, cls: 'oat-note-label' });
       item.createSpan({ text: fn.text, cls: 'oat-note-text' });
-      item.onclick = () => this.scrollToFootnote(fn.label);
+      item.onclick = () => this.scrollToInlineRef(fn.label);
     }
   }
 
-  private scrollToFootnote(label: string): void {
+  private scrollToInlineRef(label: string): void {
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!(view?.editor as any)) return;
-    const editor = view!.editor as any;
-    const content = editor.getValue();
-    // Find first inline reference [^label] (not the definition)
-    const inlineRe = new RegExp(`\\[\\^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\](?!:)`, '');
+    if (!view) return;
+    const editor = view.editor as any;
+    if (!editor) return;
+    const content = editor.getValue() as string;
+    // Match inline reference [^label] but NOT the definition [^label]:
+    const inlineRe = new RegExp(`\\[\\^${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\](?!:)`);
     const idx = content.search(inlineRe);
     if (idx < 0) return;
-    const pos = editor.offsetToPos(idx);
+    this.scrollToOffset(idx);
+  }
+
+  // ── Shared navigation ──────────────────────────────────────────────────────
+
+  /** Focus the editor leaf then scroll to the given character offset. */
+  private scrollToOffset(offset: number): void {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return;
+    const editor = view.editor as any;
+    if (!editor) return;
+    // Re-focus the editor leaf so scrollIntoView takes effect
+    (this.app.workspace as any).setActiveLeaf(view.leaf, { focus: true });
+    const pos = editor.offsetToPos(offset);
     editor.setCursor(pos);
     editor.scrollIntoView({ from: pos, to: pos }, true);
   }
+
+  // ── Log ────────────────────────────────────────────────────────────────────
 
   private buildLogPane(pane: HTMLElement): void {
     this.logEl = pane.createDiv({ cls: 'oat-log-list' });
@@ -181,7 +234,6 @@ export class SidebarPanel extends ItemView {
       item.createSpan({ text: entry.message });
     }
 
-    // Auto-scroll to bottom
     this.logEl.scrollTop = this.logEl.scrollHeight;
   }
 
